@@ -71,6 +71,15 @@ async def _setup_test_database() -> AsyncIterator[None]:
     get_settings.cache_clear()
     command.upgrade(cfg, "head")
 
+    # Rebuild the application engine to point at the test DB and use NullPool
+    # so cross-event-loop usage in pytest-asyncio doesn't trip asyncpg.
+    from app.db import session as db_session
+
+    new_engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
+    new_factory = async_sessionmaker(bind=new_engine, expire_on_commit=False, autoflush=False)
+    db_session.engine = new_engine
+    db_session.AsyncSessionLocal = new_factory
+
     yield
 
     admin_engine = create_async_engine(_admin_url(TEST_DATABASE_URL), isolation_level="AUTOCOMMIT")

@@ -65,8 +65,11 @@ select = [
     "RUF",              # ruff specifics
 ]
 ignore = [
-    "E501",  # line-length handled by formatter
-    "S101",  # asserts allowed in tests
+    "E501",   # line-length handled by formatter
+    "S101",   # asserts allowed in tests
+    "RUF001", # ambiguous unicode chars in strings (intentional FR apostrophes/spaces)
+    "RUF002", # ambiguous unicode chars in docstrings (× notation)
+    "RUF003", # ambiguous unicode chars in comments
 ]
 
 [tool.ruff.lint.per-file-ignores]
