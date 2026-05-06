@@ -4,7 +4,7 @@
  * the access token must never reach the browser.
  */
 
-import { auth } from "@/auth";
+import { AUTH_DISABLED, auth } from "@/auth";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -19,16 +19,20 @@ export class ApiError extends Error {
 }
 
 async function authedFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const session = await auth();
-  if (!session?.accessToken) {
-    throw new ApiError(401, "Not authenticated.");
+  const baseHeaders: Record<string, string> = { "Content-Type": "application/json" };
+
+  if (!AUTH_DISABLED) {
+    const session = await auth();
+    if (!session?.accessToken) {
+      throw new ApiError(401, "Not authenticated.");
+    }
+    baseHeaders.Authorization = `Bearer ${session.accessToken}`;
   }
 
   const response = await fetch(`${API_BASE}/api/v1${path}`, {
     ...init,
     headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session.accessToken}`,
+      ...baseHeaders,
       ...init.headers,
     },
     cache: "no-store",

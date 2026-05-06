@@ -6,7 +6,7 @@
 
 import { NextResponse } from "next/server";
 
-import { auth } from "@/auth";
+import { AUTH_DISABLED, auth } from "@/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -16,14 +16,18 @@ export async function GET(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  const session = await auth();
-  if (!session?.accessToken) {
-    return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
+  const headers: Record<string, string> = {};
+  if (!AUTH_DISABLED) {
+    const session = await auth();
+    if (!session?.accessToken) {
+      return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
+    }
+    headers.Authorization = `Bearer ${session.accessToken}`;
   }
   const { id } = await context.params;
 
   const upstream = await fetch(`${API_BASE}/api/v1/searches/${id}/prospects`, {
-    headers: { Authorization: `Bearer ${session.accessToken}` },
+    headers,
     cache: "no-store",
   });
 

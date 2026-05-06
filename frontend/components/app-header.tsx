@@ -1,4 +1,5 @@
-import { signOut } from "@/auth";
+import { AUTH_DISABLED, signOut } from "@/auth";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Me } from "@/lib/api";
 
@@ -35,16 +36,22 @@ export function AppHeader({ user }: { user: Me }): JSX.Element {
             {initials || "?"}
           </div>
         )}
-        <form
-          action={async () => {
-            "use server";
-            await signOut({ redirectTo: "/login" });
-          }}
-        >
-          <Button type="submit" variant="ghost" size="sm">
-            Déconnexion
-          </Button>
-        </form>
+        {AUTH_DISABLED ? (
+          <Badge variant="secondary" className="uppercase tracking-wide">
+            Mode démo
+          </Badge>
+        ) : (
+          <form
+            action={async () => {
+              "use server";
+              await signOut({ redirectTo: "/login" });
+            }}
+          >
+            <Button type="submit" variant="ghost" size="sm">
+              Déconnexion
+            </Button>
+          </form>
+        )}
       </div>
     </header>
   );

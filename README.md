@@ -32,6 +32,31 @@ Pipeline d'enrichissement (Phase 3) : **Bright Data GMaps → INSEE
 `recherche-entreprises.api.gouv.fr` → Pappers (web unlocker) → réseaux sociaux footer →
 scoring 0-100 → Pipedrive** (dédoublonnage tél E.164 + SIREN).
 
+## Mode démo (sans Auth0)
+
+Pour tester l'application sans configurer Auth0, exporte ces variables avant
+le boot (ou règle-les côté Render / Vercel) :
+
+```bash
+# Backend
+AUTH_DISABLED=true
+# Frontend (build-time)
+AUTH_DISABLED=true
+```
+
+Effets :
+
+- Le backend ignore le header `Authorization` et résout chaque requête comme
+  un user `demo@noxias.fr` (créé en DB au premier appel).
+- Le front skippe NextAuth, l'URL `/` redirige direct vers `/dashboard`, et
+  l'header affiche un badge **« Mode démo »** à la place de la déconnexion.
+
+Pour rebrancher Auth0 plus tard : remettre `AUTH_DISABLED=false` (ou supprimer
+la variable) et renseigner les `AUTH0_*` côté back + front. Aucun code à
+changer.
+
+> ⚠️ Ne jamais activer ce flag en production — l'app devient ouverte.
+
 ## Stack et décisions
 
 | Couche | Techno | Pourquoi |

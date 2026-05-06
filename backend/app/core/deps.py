@@ -10,11 +10,38 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.security import AuthError, verify_access_token
 from app.db.models import User, UserRole
 from app.db.session import get_db
 
 bearer_scheme = HTTPBearer(auto_error=False)
+
+DEMO_USER_SUB = "demo|local"
+DEMO_USER_EMAIL = "demo@noxias.fr"
+
+
+async def _resolve_demo_user(db: AsyncSession) -> User:
+    """Upsert and return the single demo user used when AUTH_DISABLED is on."""
+    result = await db.execute(select(User).where(User.auth0_sub == DEMO_USER_SUB))
+    user = result.scalar_one_or_none()
+    now = datetime.now(UTC)
+    if user is None:
+        user = User(
+            auth0_sub=DEMO_USER_SUB,
+            email=DEMO_USER_EMAIL,
+            name="Demo Noxias",
+            role=UserRole.SALES,
+            last_login_at=now,
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+    else:
+        user.last_login_at = now
+        await db.commit()
+        await db.refresh(user)
+    return user
 
 
 async def get_current_user(
@@ -27,9 +54,16 @@ async def get_current_user(
     On first login the user is created (upsert by ``auth0_sub``). The
     ``last_login_at`` timestamp is refreshed on every authenticated request.
 
+    When ``AUTH_DISABLED=True`` (dev/demo mode), JWT verification is skipped
+    entirely and every request is mapped to a shared ``demo@noxias.fr`` user.
+
     Raises:
-        HTTPException 401: if no token is provided or token is invalid.
+        HTTPException 401: if no token is provided or token is invalid
+            (only when AUTH_DISABLED is False).
     """
+    if get_settings().AUTH_DISABLED:
+        return await _resolve_demo_user(db)
+
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

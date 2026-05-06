@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     AUTH0_CLIENT_SECRET: str = ""
     AUTH0_AUDIENCE: str = ""
 
+    # When True, the backend skips JWT verification and serves every request
+    # as a single "demo@noxias.fr" user. Useful before Auth0 is provisioned;
+    # MUST stay False in production.
+    AUTH_DISABLED: bool = False
+
     # --- Bright Data scraping ---
     BRIGHTDATA_API_TOKEN: str = ""
     BRIGHTDATA_GMAPS_DATASET_ID: str = "gd_m8ebnr0q2qlklc02fz"
