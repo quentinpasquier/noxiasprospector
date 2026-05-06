@@ -1,0 +1,127 @@
+# =====================
+#  Python
+# =====================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.cache
+
+# Type checkers
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+
+# Virtual envs
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.python-version
+
+# Poetry / uv
+.uv/
+
+# =====================
+#  Node / Next.js
+# =====================
+node_modules/
+.pnpm-store/
+.npm
+.next/
+out/
+.vercel
+.turbo
+.swc/
+
+# Build artefacts
+*.tsbuildinfo
+next-env.d.ts
+
+# =====================
+#  Env files (NEVER commit real secrets)
+# =====================
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# =====================
+#  Logs / runtime
+# =====================
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =====================
+#  Databases / volumes
+# =====================
+*.sqlite
+*.sqlite3
+*.db
+postgres-data/
+redis-data/
+
+# =====================
+#  IDE / OS
+# =====================
+.idea/
+.vscode/
+!.vscode/settings.shared.json
+*.swp
+*.swo
+*~
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# =====================
+#  Misc
+# =====================
+*.pid
+.cache/
+tmp/
+.tmp/
