@@ -52,6 +52,15 @@ async def create_search(payload: SearchCreate, db: DbSession, user: CurrentUser)
     return SearchPublic.model_validate(search)
 
 
+@router.get("", response_model=list[SearchPublic])
+async def list_searches(db: DbSession, user: CurrentUser) -> list[SearchPublic]:
+    """Return the authenticated user's searches, newest first."""
+    result = await db.execute(
+        select(Search).where(Search.owner_id == user.id).order_by(Search.created_at.desc())
+    )
+    return [SearchPublic.model_validate(s) for s in result.scalars().all()]
+
+
 @router.get("/{search_id}", response_model=SearchPublic)
 async def get_search(search_id: uuid.UUID, db: DbSession, user: CurrentUser) -> SearchPublic:
     search = await db.get(Search, search_id)
