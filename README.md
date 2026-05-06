@@ -56,13 +56,74 @@ Décisions validées (cf. journal Phase 0) :
 
 ## Conformité RGPD
 
-- Table `Blacklist` avec `POST /api/blacklist` ; tous les enrichissements la consultent.
-- `DELETE /api/prospects/{id}` retire la fiche de la DB **et** de Pipedrive (note de
-  suppression conservée 3 ans pour traçabilité).
-- Logs structurés sans PII : numéros et emails sont anonymisés (`+33***45`, `j***@noxias.fr`).
-- Sentry initialisé avec `send_default_pii=False`.
+NoxiasProspect traite des données personnelles de prospects B2B (article 6 (1)(f) du
+RGPD — intérêt légitime de prospection). Le produit implémente les obligations
+suivantes côté technique :
 
-Détails complets en Phase 6.
+### Droit d'opposition (art. 21) — opt-out
+
+- Table `Blacklist` (`siren`, `phone_e164`, `reason`, `note`, `added_by`).
+- API : `GET /api/v1/blacklist`, `POST /api/v1/blacklist`, `DELETE /api/v1/blacklist/{id}`.
+- UI : page **Blacklist (RGPD)** dans la sidebar — formulaire d'ajout + tableau.
+- L'orchestrateur d'enrichissement consulte la blacklist **avant** chaque écriture
+  (`app/enrichment/blacklist.py::is_blacklisted`). Toute fiche dont le SIREN ou le
+  téléphone E.164 est inscrit est automatiquement écartée — couvert par les tests
+  `test_orchestrator_full_pipeline` et `test_blacklisted_siren_is_filtered_by_orchestrator`.
+
+### Droit à l'effacement (art. 17)
+
+- `DELETE /api/v1/prospects/{id}` enchaîne :
+  1. **Pipedrive** — suppression du Deal, puis Person, puis Organization (best-effort,
+     une erreur Pipedrive n'empêche pas la suite).
+  2. **Auto opt-out** — insertion d'une ligne `Blacklist` (siren + tél) pour bloquer
+     les futures fiches.
+  3. **Audit RGPD** — insertion d'une ligne `DeletionLog` minimisée :
+     - SIREN intégral (donnée légale publique, art. 4-1)
+     - téléphone : 4 derniers chiffres uniquement
+     - nom commercial
+     - email du commercial qui a supprimé
+     - IDs Pipedrive originaux
+     - `created_at` (utilisé pour la purge automatique à 3 ans)
+  4. **Suppression locale** du `Prospect` (cascade vers `PipedriveMapping`).
+- Bouton « Supprimer (RGPD) » visible sur la fiche prospect, avec confirmation modale
+  qui détaille les conséquences (irréversible).
+
+### Minimisation et anti-fuite PII
+
+- `app/core/logging.py` expose `anonymize_phone()` et `anonymize_email()`. Tous les
+  appels qui logguent un identifiant passent par ces helpers (`+33***22`, `j***@noxias.fr`).
+- `app/core/http.py` enregistre **uniquement** le verbe, l'host, le path, le code et
+  la durée — jamais les bodies de requête / réponse.
+- Sentry initialisé avec `sendDefaultPii: false` (front + back).
+- Les payloads bruts de Bright Data / Pappers sont stockés en JSONB côté DB (pour
+  replay/debug) mais ne sortent pas du périmètre Noxias (ni Sentry, ni logs).
+
+### Rétention
+
+| Donnée | Durée | Mécanisme |
+| ------ | ----- | --------- |
+| `Prospect` (actif) | 24 mois après dernier enrichissement | purge périodique à brancher (V2) |
+| `DeletionLog` | **3 ans** (à confirmer DPO) | filtre sur `created_at` < `now() - 3 years` |
+| `Blacklist` | indéfini (opt-out volontaire) | retirable via `DELETE /api/v1/blacklist/{id}` |
+| Logs Sentry | 30 jours (rétention par défaut) | configuré côté Sentry SaaS |
+
+### Process d'opt-out (à documenter au DPO)
+
+1. Demande reçue (email DPO ou directement par le contact).
+2. Le commercial ouvre la fiche dans NoxiasProspect → bouton « Supprimer (RGPD) ».
+3. Confirmation : suppression DB + Pipedrive + opt-out automatique.
+4. Une ligne `DeletionLog` est conservée 3 ans (preuve de traitement art. 30 RGPD).
+5. Si la demande arrive par email, l'admin peut ajouter directement le SIREN ou le
+   téléphone via la page **Blacklist** sans qu'une fiche existe en DB.
+
+### Observabilité conforme
+
+- `structlog` JSON renderer en prod (consommable par Datadog / Loki / CloudWatch).
+- Chaque appel HTTP externe (Bright Data, INSEE, Pappers, Pipedrive) loggué avec
+  durée, status code, host. Les requêtes > 5 s déclenchent un `http.slow` WARN.
+- Sentry capture les exceptions avec contexte minimal (pas de PII).
+
+---
 
 ## État d'avancement
 

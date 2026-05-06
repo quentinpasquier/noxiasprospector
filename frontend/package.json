@@ -26,6 +26,7 @@
     "@radix-ui/react-progress": "^1.1.0",
     "@radix-ui/react-slider": "^1.2.1",
     "@radix-ui/react-toast": "^1.2.2",
+    "@sentry/nextjs": "^8.40.0",
     "@tanstack/react-virtual": "^3.10.9",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",

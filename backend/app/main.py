@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
 from app.api.auth import router as auth_router
+from app.api.blacklist import router as blacklist_router
 from app.api.exports import router as exports_router
 from app.api.prospects import router as prospects_router
 from app.api.searches import router as searches_router
@@ -72,6 +73,7 @@ def create_app() -> FastAPI:
     app.include_router(searches_router, prefix=settings.API_V1_PREFIX)
     app.include_router(prospects_router, prefix=settings.API_V1_PREFIX)
     app.include_router(exports_router, prefix=settings.API_V1_PREFIX)
+    app.include_router(blacklist_router, prefix=settings.API_V1_PREFIX)
 
     return app
 

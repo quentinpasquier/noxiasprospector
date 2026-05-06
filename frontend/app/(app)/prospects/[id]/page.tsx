@@ -6,6 +6,8 @@ import { ScoreBadge } from "@/components/ui/score-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApiError, api, type Prospect } from "@/lib/api";
 
+import { DeleteProspectButton } from "./delete-button";
+
 function fmtCurrency(eur: number | null): string {
   if (eur === null) return "—";
   return new Intl.NumberFormat("fr-FR", {
@@ -78,7 +80,10 @@ export default async function ProspectDetailPage({
             <p className="mt-1 text-sm text-muted-foreground">{p.legal_name}</p>
           )}
         </div>
-        <ScoreBadge score={p.score} label={p.label} className="text-sm" />
+        <div className="flex items-start gap-2">
+          <ScoreBadge score={p.score} label={p.label} className="text-sm" />
+          <DeleteProspectButton prospectId={p.id} searchId={p.search_id} />
+        </div>
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">

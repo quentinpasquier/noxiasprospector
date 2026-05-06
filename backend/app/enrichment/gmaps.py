@@ -55,7 +55,9 @@ class BrightDataError(RuntimeError):
 
 
 def _client(token: str) -> httpx.AsyncClient:
-    return httpx.AsyncClient(
+    from app.core.http import make_async_client
+
+    return make_async_client(
         base_url=BRIGHTDATA_BASE_URL,
         headers={"Authorization": f"Bearer {token}"},
         timeout=30.0,

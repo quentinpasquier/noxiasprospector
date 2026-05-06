@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Search, Home } from "lucide-react";
+import { Home, Plus, Search, ShieldOff } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -16,6 +16,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Tableau de bord", icon: Home },
   { href: "/searches", label: "Recherches", icon: Search },
   { href: "/searches/new", label: "Nouvelle recherche", icon: Plus },
+  { href: "/blacklist", label: "Blacklist (RGPD)", icon: ShieldOff },
 ];
 
 export function Sidebar(): JSX.Element {

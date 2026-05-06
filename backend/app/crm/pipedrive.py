@@ -11,7 +11,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-import httpx
 import structlog
 
 from app.core.config import get_settings
@@ -46,8 +45,10 @@ class PipedriveClient:
     def __init__(self, *, api_token: str, company_domain: str) -> None:
         if not api_token or not company_domain:
             raise PipedriveError("Pipedrive client is missing token or company domain.")
+        from app.core.http import make_async_client
+
         self._api_token = api_token
-        self._client = httpx.AsyncClient(
+        self._client = make_async_client(
             base_url=_build_base_url(company_domain),
             timeout=20.0,
         )
@@ -189,6 +190,22 @@ class PipedriveClient:
             payload["person_id"] = person_id
         data = (await self._post("/notes", payload)).get("data") or {}
         return int(data["id"])
+
+    # --- Delete -----------------------------------------------------------
+    async def _delete(self, path: str) -> None:
+        response = await self._client.delete(path, params={"api_token": self._api_token})
+        # 404 is tolerated — the row may have been removed manually already.
+        if response.status_code not in (200, 204, 404):
+            raise PipedriveError(f"DELETE {path} -> {response.status_code}: {response.text[:200]}")
+
+    async def delete_organization(self, org_id: int) -> None:
+        await self._delete(f"/organizations/{org_id}")
+
+    async def delete_person(self, person_id: int) -> None:
+        await self._delete(f"/persons/{person_id}")
+
+    async def delete_deal(self, deal_id: int) -> None:
+        await self._delete(f"/deals/{deal_id}")
 
 
 def build_client() -> PipedriveClient:

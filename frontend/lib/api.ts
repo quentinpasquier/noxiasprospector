@@ -39,6 +39,7 @@ async function authedFetch<T>(path: string, init: RequestInit = {}): Promise<T> 
     throw new ApiError(response.status, detail || response.statusText);
   }
 
+  if (response.status === 204) return null as T;
   return (await response.json()) as T;
 }
 
@@ -139,6 +140,39 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ skip_prospect_ids }),
     }),
+
+  deleteProspect: (id: string) =>
+    authedFetch<null>(`/prospects/${id}`, { method: "DELETE" }),
+
+  listBlacklist: () => authedFetch<BlacklistEntry[]>("/blacklist"),
+
+  addBlacklist: (payload: BlacklistCreate) =>
+    authedFetch<BlacklistEntry>("/blacklist", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  removeBlacklist: (id: string) =>
+    authedFetch<null>(`/blacklist/${id}`, { method: "DELETE" }),
+};
+
+// ----- Blacklist schemas -----
+export type BlacklistReason = "opt_out" | "invalid" | "competitor";
+
+export type BlacklistEntry = {
+  id: string;
+  siren: string | null;
+  phone_e164: string | null;
+  reason: BlacklistReason;
+  note: string | null;
+  created_at: string;
+};
+
+export type BlacklistCreate = {
+  siren?: string | null;
+  phone_e164?: string | null;
+  reason: BlacklistReason;
+  note?: string | null;
 };
 
 // ----- Export schemas -----

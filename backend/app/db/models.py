@@ -80,6 +80,14 @@ class BlacklistReason(enum.StrEnum):
     COMPETITOR = "competitor"  # do-not-contact list
 
 
+class DeletionReason(enum.StrEnum):
+    """Why a prospect record was deleted."""
+
+    USER_REQUEST = "user_request"  # RGPD art. 17
+    DATA_QUALITY = "data_quality"  # bad scrape, test row
+    DUPLICATE = "duplicate"
+
+
 # ============================================================
 #  User
 # ============================================================
@@ -283,6 +291,39 @@ class Blacklist(UUIDPkMixin, TimestampMixin, Base):
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
+
+
+# ============================================================
+#  DeletionLog — RGPD audit trail (kept 3 years)
+# ============================================================
+class DeletionLog(UUIDPkMixin, TimestampMixin, Base):
+    """Audit row written when a prospect is deleted (DB + Pipedrive).
+
+    Per the spec, the deletion note must be kept three years; rows older
+    than that can be safely purged by an external job. Identifiers are
+    stored hashed (we keep SIREN as-is for legal lookup but we keep only
+    the last 4 digits of phones to limit PII).
+    """
+
+    __tablename__ = "deletion_logs"
+
+    siren: Mapped[str | None] = mapped_column(String(9), nullable=True)
+    phone_last4: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reason: Mapped[DeletionReason] = mapped_column(
+        Enum(DeletionReason, name="deletion_reason"),
+        nullable=False,
+        default=DeletionReason.USER_REQUEST,
+    )
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    deleted_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    deleted_by_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    pipedrive_organization_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    pipedrive_deal_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 # ============================================================
