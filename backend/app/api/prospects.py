@@ -14,9 +14,7 @@ router = APIRouter(prefix="/prospects", tags=["prospects"])
 
 
 @router.get("/{prospect_id}", response_model=ProspectPublic)
-async def get_prospect(
-    prospect_id: uuid.UUID, db: DbSession, user: CurrentUser
-) -> ProspectPublic:
+async def get_prospect(prospect_id: uuid.UUID, db: DbSession, user: CurrentUser) -> ProspectPublic:
     """Return the prospect if it belongs to a search owned by the caller."""
     prospect = await db.get(Prospect, prospect_id)
     if prospect is None:

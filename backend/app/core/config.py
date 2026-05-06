@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     # --- Pipedrive ---
     PIPEDRIVE_API_TOKEN: str = ""
     PIPEDRIVE_COMPANY_DOMAIN: str = ""
+    # Custom field keys are 40-char hashes returned by Pipedrive when a custom
+    # field is created. Empty string disables the corresponding feature.
+    PIPEDRIVE_SIREN_FIELD_KEY: str = ""  # on organizations
+    PIPEDRIVE_IMPORTED_BY_FIELD_KEY: str = ""  # on deals
+    PIPEDRIVE_PIPELINE_ID: int | None = None  # default pipeline if not set
 
     # --- Observability ---
     SENTRY_DSN: str = ""

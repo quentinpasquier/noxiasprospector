@@ -128,4 +128,45 @@ export const api = {
     authedFetch<Prospect[]>(`/searches/${searchId}/prospects`),
 
   getProspect: (id: string) => authedFetch<Prospect>(`/prospects/${id}`),
+
+  previewExport: (searchId: string) =>
+    authedFetch<ExportPreview>(`/searches/${searchId}/exports/pipedrive/preview`, {
+      method: "POST",
+    }),
+
+  runExport: (searchId: string, skip_prospect_ids: string[]) =>
+    authedFetch<ExportResponse>(`/searches/${searchId}/exports/pipedrive`, {
+      method: "POST",
+      body: JSON.stringify({ skip_prospect_ids }),
+    }),
+};
+
+// ----- Export schemas -----
+export type DuplicateReason = "none" | "phone" | "siren" | "already_exported";
+
+export type ExportPreviewItem = {
+  prospect_id: string;
+  name: string;
+  siren: string | null;
+  phone_e164: string | null;
+  duplicate_reason: DuplicateReason;
+  duplicate_pipedrive_id: number | null;
+};
+
+export type ExportPreview = { items: ExportPreviewItem[] };
+
+export type ExportResultItem = {
+  prospect_id: string;
+  status: "created" | "skipped" | "failed";
+  organization_id: number | null;
+  person_id: number | null;
+  deal_id: number | null;
+  error: string | null;
+};
+
+export type ExportResponse = {
+  created: number;
+  skipped: number;
+  failed: number;
+  items: ExportResultItem[];
 };

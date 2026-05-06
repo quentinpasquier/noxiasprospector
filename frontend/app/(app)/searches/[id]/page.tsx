@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ApiError, api } from "@/lib/api";
 
+import { ExportDialog } from "./export-dialog";
 import { LiveView } from "./live-view";
 
 export default async function SearchDetailPage({
@@ -27,9 +28,14 @@ export default async function SearchDetailPage({
         <Link href="/searches" className="text-sm text-muted-foreground hover:underline">
           ← Toutes les recherches
         </Link>
-        <Button asChild variant="outline" size="sm">
-          <a href={`/api/proxy/searches/${id}/export.csv`}>Exporter CSV</a>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <a href={`/api/proxy/searches/${id}/export.csv`}>Exporter CSV</a>
+          </Button>
+          {search.status === "completed" && prospects.length > 0 && (
+            <ExportDialog searchId={id} />
+          )}
+        </div>
       </div>
       <LiveView initialSearch={search} initialProspects={prospects} />
     </div>
