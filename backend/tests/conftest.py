@@ -65,6 +65,9 @@ async def _setup_test_database() -> AsyncIterator[None]:
         TEST_DATABASE_URL.replace("+asyncpg", ""),
     )
     os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+    # Auth is exercised via monkey-patched verify_access_token; force the
+    # flag off so the auto-detect (Auth0 envs missing) doesn't bypass it.
+    os.environ["AUTH_DISABLED"] = "false"
     # Reset the cached settings so the new URL is picked up.
     from app.core.config import get_settings
 

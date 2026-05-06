@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, Plus, Search, ShieldOff } from "lucide-react";
+import { Crosshair, ListChecks, ShieldOff } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -13,10 +13,9 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Tableau de bord", icon: Home },
-  { href: "/searches", label: "Recherches", icon: Search },
-  { href: "/searches/new", label: "Nouvelle recherche", icon: Plus },
-  { href: "/blacklist", label: "Blacklist (RGPD)", icon: ShieldOff },
+  { href: "/cibler", label: "Cibler", icon: Crosshair },
+  { href: "/searches", label: "Recherches", icon: ListChecks },
+  { href: "/blacklist", label: "Blacklist", icon: ShieldOff },
 ];
 
 export function Sidebar(): JSX.Element {
@@ -24,7 +23,7 @@ export function Sidebar(): JSX.Element {
   return (
     <aside className="hidden w-56 shrink-0 border-r bg-card md:flex md:flex-col">
       <div className="border-b px-6 py-4">
-        <Link href="/dashboard" className="text-base font-bold tracking-tight">
+        <Link href="/cibler" className="text-base font-bold tracking-tight">
           NoxiasProspect
         </Link>
       </div>
@@ -33,7 +32,7 @@ export function Sidebar(): JSX.Element {
           const Icon = item.icon;
           const active =
             pathname === item.href ||
-            (item.href !== "/dashboard" && pathname?.startsWith(item.href));
+            (item.href !== "/cibler" && pathname?.startsWith(item.href));
           return (
             <Link
               key={item.href}
@@ -51,6 +50,9 @@ export function Sidebar(): JSX.Element {
           );
         })}
       </nav>
+      <div className="border-t p-3 text-xs text-muted-foreground">
+        Cibler → Enrichir → Exporter Pipedrive
+      </div>
     </aside>
   );
 }

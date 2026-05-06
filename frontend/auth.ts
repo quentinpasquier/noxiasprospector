@@ -16,7 +16,18 @@ declare module "next-auth" {
   }
 }
 
-export const AUTH_DISABLED = process.env.AUTH_DISABLED === "true";
+// Auto-disable when Auth0 isn't configured — saves users from a crash on
+// fresh deployments. Set AUTH_DISABLED=false explicitly in prod once Auth0
+// is wired in.
+const auth0Configured = Boolean(
+  process.env.AUTH0_CLIENT_ID &&
+    process.env.AUTH0_CLIENT_SECRET &&
+    process.env.AUTH0_DOMAIN,
+);
+
+export const AUTH_DISABLED =
+  process.env.AUTH_DISABLED === "true" ||
+  (process.env.AUTH_DISABLED !== "false" && !auth0Configured);
 
 const requiredEnv = (key: string): string => {
   const value = process.env[key];

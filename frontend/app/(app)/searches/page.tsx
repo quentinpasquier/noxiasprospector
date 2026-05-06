@@ -32,15 +32,15 @@ export default async function SearchesPage(): Promise<JSX.Element> {
           </p>
         </div>
         <Button asChild>
-          <Link href="/searches/new">+ Nouvelle recherche</Link>
+          <Link href="/cibler">+ Nouveau ciblage</Link>
         </Button>
       </div>
 
       <div className="mt-8 space-y-3">
         {searches.length === 0 ? (
           <Card className="p-8 text-center text-sm text-muted-foreground">
-            Pas encore de recherche. Lance ta première prospection en cliquant sur
-            « Nouvelle recherche ».
+            Pas encore de ciblage. Construis ta première base depuis l&apos;onglet
+            « Cibler ».
           </Card>
         ) : (
           searches.map((s) => (

@@ -61,7 +61,7 @@ async def get_current_user(
         HTTPException 401: if no token is provided or token is invalid
             (only when AUTH_DISABLED is False).
     """
-    if get_settings().AUTH_DISABLED:
+    if get_settings().is_auth_disabled:
         return await _resolve_demo_user(db)
 
     if credentials is None or credentials.scheme.lower() != "bearer":

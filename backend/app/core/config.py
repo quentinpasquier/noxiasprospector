@@ -38,10 +38,10 @@ class Settings(BaseSettings):
     AUTH0_CLIENT_SECRET: str = ""
     AUTH0_AUDIENCE: str = ""
 
-    # When True, the backend skips JWT verification and serves every request
-    # as a single "demo@noxias.fr" user. Useful before Auth0 is provisioned;
-    # MUST stay False in production.
-    AUTH_DISABLED: bool = False
+    # 3-state flag: True / False forces the mode; None auto-disables auth
+    # when Auth0 isn't configured. In production, set explicitly to False
+    # alongside the AUTH0_* envs.
+    AUTH_DISABLED: bool | None = None
 
     # --- Bright Data scraping ---
     BRIGHTDATA_API_TOKEN: str = ""
@@ -73,6 +73,13 @@ class Settings(BaseSettings):
     def is_production(self) -> bool:
         """Return True if running in production environment."""
         return self.ENVIRONMENT == "production"
+
+    @property
+    def is_auth_disabled(self) -> bool:
+        """Resolve the AUTH_DISABLED flag, auto-detecting from Auth0 envs."""
+        if self.AUTH_DISABLED is not None:
+            return self.AUTH_DISABLED
+        return not (self.AUTH0_DOMAIN and self.AUTH0_AUDIENCE)
 
 
 @lru_cache

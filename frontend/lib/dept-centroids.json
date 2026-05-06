@@ -1,0 +1,21 @@
+{
+  "_meta": {
+    "source": "Coordonnées approximatives des préfectures Auvergne-Rhône-Alpes",
+    "epsg": 4326
+  },
+  "departments": {
+    "01": { "label": "Ain", "city": "Bourg-en-Bresse", "lat": 46.2044, "lon": 5.2280 },
+    "03": { "label": "Allier", "city": "Moulins", "lat": 46.5650, "lon": 3.3327 },
+    "07": { "label": "Ardèche", "city": "Privas", "lat": 44.7349, "lon": 4.5996 },
+    "15": { "label": "Cantal", "city": "Aurillac", "lat": 44.9258, "lon": 2.4444 },
+    "26": { "label": "Drôme", "city": "Valence", "lat": 44.9334, "lon": 4.8924 },
+    "38": { "label": "Isère", "city": "Grenoble", "lat": 45.1885, "lon": 5.7245 },
+    "42": { "label": "Loire", "city": "Saint-Étienne", "lat": 45.4397, "lon": 4.3872 },
+    "43": { "label": "Haute-Loire", "city": "Le Puy-en-Velay", "lat": 45.0428, "lon": 3.8859 },
+    "63": { "label": "Puy-de-Dôme", "city": "Clermont-Ferrand", "lat": 45.7772, "lon": 3.0870 },
+    "69": { "label": "Rhône", "city": "Lyon", "lat": 45.7640, "lon": 4.8357 },
+    "73": { "label": "Savoie", "city": "Chambéry", "lat": 45.5646, "lon": 5.9178 },
+    "74": { "label": "Haute-Savoie", "city": "Annecy", "lat": 45.8992, "lon": 6.1294 }
+  },
+  "default_center": { "lat": 45.5, "lon": 4.85, "zoom": 7 }
+}
