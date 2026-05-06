@@ -13,6 +13,8 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from app.core.config import get_settings
+from app.db.base import Base
+from app.db import models
 
 config = context.config
 
@@ -28,8 +30,7 @@ def _sync_database_url() -> str:
 
 config.set_main_option("sqlalchemy.url", _sync_database_url())
 
-# Phase 2: import Base.metadata once models exist.
-target_metadata = None
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:

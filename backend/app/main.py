@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
+from app.api.auth import router as auth_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
 
@@ -61,8 +62,10 @@ def create_app() -> FastAPI:
 
     @app.get("/health/ready", tags=["health"])
     async def readiness() -> dict[str, str]:
-        """Readiness probe — DB/Redis checks added at Phase 2."""
+        """Readiness probe — DB/Redis checks added at Phase 7."""
         return {"status": "ready"}
+
+    app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
 
     return app
 
