@@ -3,9 +3,12 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import redis.asyncio as redis
 import sentry_sdk
-from fastapi import FastAPI
+from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
 
 from app import __version__
 from app.api.auth import router as auth_router
@@ -15,6 +18,7 @@ from app.api.prospects import router as prospects_router
 from app.api.searches import router as searches_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
+from app.db.session import engine
 
 
 @asynccontextmanager
@@ -61,13 +65,42 @@ def create_app() -> FastAPI:
 
     @app.get("/health", tags=["health"])
     def health() -> dict[str, str]:
-        """Liveness probe."""
+        """Liveness probe — process is up. Used by Render/Fly.io health checks."""
         return {"status": "ok", "version": __version__}
 
     @app.get("/health/ready", tags=["health"])
-    async def readiness() -> dict[str, str]:
-        """Readiness probe — DB/Redis checks added at Phase 7."""
-        return {"status": "ready"}
+    async def readiness() -> JSONResponse:
+        """Readiness probe — pings Postgres and Redis.
+
+        Returns ``503`` with per-dependency status if any of the backing
+        services is unreachable, so traffic isn't routed to broken instances.
+        """
+        results: dict[str, str] = {}
+
+        try:
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+            results["database"] = "ok"
+        except Exception as exc:  # pragma: no cover -- exercised in prod only
+            results["database"] = f"error: {exc.__class__.__name__}"
+
+        try:
+            client: redis.Redis = redis.Redis.from_url(settings.REDIS_URL)
+            try:
+                await client.ping()
+                results["redis"] = "ok"
+            finally:
+                await client.aclose()
+        except Exception as exc:  # pragma: no cover -- exercised in prod only
+            results["redis"] = f"error: {exc.__class__.__name__}"
+
+        all_ok = all(v == "ok" for v in results.values())
+        return JSONResponse(
+            status_code=status.HTTP_200_OK
+            if all_ok
+            else status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"status": "ready" if all_ok else "degraded", **results},
+        )
 
     app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
     app.include_router(searches_router, prefix=settings.API_V1_PREFIX)

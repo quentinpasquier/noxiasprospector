@@ -1,0 +1,128 @@
+# Render IaC — provisions the full backend stack in one go.
+#
+#   render blueprint launch
+#
+# Provisions:
+# - noxiasprospect-api      (FastAPI service, public, Docker)
+# - noxiasprospect-worker   (arq worker, private, Docker)
+# - noxiasprospect-db       (managed Postgres 15)
+# - noxiasprospect-redis    (managed Redis)
+#
+# The API service applies Alembic migrations on every boot via the entrypoint
+# script. Secrets (Auth0, Bright Data, Pipedrive, Sentry) must be set in the
+# Render dashboard / synced via `render env import` — they are NOT defined here.
+
+services:
+  # --- FastAPI HTTP service ------------------------------------------------
+  - type: web
+    name: noxiasprospect-api
+    runtime: docker
+    plan: starter
+    region: frankfurt
+    rootDir: backend
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    healthCheckPath: /health
+    autoDeploy: true
+    branch: main
+    envVars:
+      - key: ROLE
+        value: api
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: API_V1_PREFIX
+        value: /api/v1
+      - key: PORT
+        value: "8000"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: noxiasprospect-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: noxiasprospect-redis
+          type: redis
+          property: connectionString
+      # Secrets — set in dashboard.
+      - key: AUTH0_DOMAIN
+        sync: false
+      - key: AUTH0_CLIENT_ID
+        sync: false
+      - key: AUTH0_CLIENT_SECRET
+        sync: false
+      - key: AUTH0_AUDIENCE
+        sync: false
+      - key: BRIGHTDATA_API_TOKEN
+        sync: false
+      - key: BRIGHTDATA_GMAPS_DATASET_ID
+        value: gd_m8ebnr0q2qlklc02fz
+      - key: BRIGHTDATA_UNLOCKER_ZONE
+        value: sdk_unlocker
+      - key: PIPEDRIVE_API_TOKEN
+        sync: false
+      - key: PIPEDRIVE_COMPANY_DOMAIN
+        sync: false
+      - key: PIPEDRIVE_SIREN_FIELD_KEY
+        sync: false
+      - key: PIPEDRIVE_IMPORTED_BY_FIELD_KEY
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+
+  # --- arq worker (no public URL) -----------------------------------------
+  - type: worker
+    name: noxiasprospect-worker
+    runtime: docker
+    plan: starter
+    region: frankfurt
+    rootDir: backend
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    autoDeploy: true
+    branch: main
+    envVars:
+      - key: ROLE
+        value: worker
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: DATABASE_URL
+        fromDatabase:
+          name: noxiasprospect-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: noxiasprospect-redis
+          type: redis
+          property: connectionString
+      - key: BRIGHTDATA_API_TOKEN
+        sync: false
+      - key: BRIGHTDATA_GMAPS_DATASET_ID
+        value: gd_m8ebnr0q2qlklc02fz
+      - key: BRIGHTDATA_UNLOCKER_ZONE
+        value: sdk_unlocker
+      - key: PIPEDRIVE_API_TOKEN
+        sync: false
+      - key: PIPEDRIVE_COMPANY_DOMAIN
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+
+  # --- Managed Redis -------------------------------------------------------
+  - type: redis
+    name: noxiasprospect-redis
+    plan: free
+    region: frankfurt
+    ipAllowList: []
+    maxmemoryPolicy: noeviction
+
+# --- Managed Postgres ------------------------------------------------------
+databases:
+  - name: noxiasprospect-db
+    plan: free
+    region: frankfurt
+    postgresMajorVersion: 15
+    ipAllowList: []

@@ -128,13 +128,148 @@ suivantes côté technique :
 ## État d'avancement
 
 - [x] **Phase 0** — Cadrage, hypothèses, questions
-- [x] **Phase 1** — Scaffold + infra dev (back/front bootent, CI verte, pre-commit OK)
-- [ ] Phase 2 — Modèle de données + auth Auth0
-- [ ] Phase 3 — Pipeline d'enrichissement
-- [ ] Phase 4 — Front utilisateur
-- [ ] Phase 5 — Intégration Pipedrive
-- [ ] Phase 6 — RGPD + observabilité
-- [ ] Phase 7 — Mise en prod
+- [x] **Phase 1** — Scaffold + infra dev
+- [x] **Phase 2** — Modèle de données + auth Auth0
+- [x] **Phase 3** — Pipeline d'enrichissement
+- [x] **Phase 4** — Front utilisateur
+- [x] **Phase 5** — Intégration Pipedrive
+- [x] **Phase 6** — RGPD + observabilité
+- [x] **Phase 7** — Mise en prod
+
+## Déploiement
+
+L'architecture cible utilise **Render** pour tout le backend (API + worker + Postgres + Redis)
+et **Vercel** pour le front Next.js. Les deux fournisseurs branchent directement sur la
+branche `main` du repo.
+
+### Vue d'ensemble
+
+```
+                                ┌──────────────────────────────────────┐
+                                │            Vercel (front)            │
+                                │   Next.js 14 / Auth.js v5 / Sentry   │
+   GitHub ───── push main ─────▶│   region: cdg1 (Paris)               │
+                                └──────────────┬───────────────────────┘
+                                               │ HTTPS + Bearer
+                                               ▼
+   ┌──────────────────────────────────────────────────────────────────┐
+   │                        Render (backend, FRA)                     │
+   │  ┌────────────────────┐    ┌──────────────────┐                  │
+   │  │ noxiasprospect-api │    │ noxiasprospect-  │                  │
+   │  │ (Docker, public)   │    │      worker      │                  │
+   │  │  uvicorn :8000     │    │   arq runner     │                  │
+   │  └────┬───────┬───────┘    └─────┬────────────┘                  │
+   │       │       │                  │                                │
+   │       ▼       ▼                  ▼                                │
+   │  ┌──────────┐  ┌──────────────────────┐                           │
+   │  │ Redis    │  │ Postgres 15 (managed)│                           │
+   │  └──────────┘  └──────────────────────┘                           │
+   └──────────────────────────────────────────────────────────────────┘
+```
+
+### Backend — Render (Blueprint)
+
+```bash
+# 1. Push to main (CI must be green)
+git push origin main
+
+# 2. Provision the full stack from render.yaml
+render blueprint launch        # or: paste render.yaml in the Render UI
+```
+
+`render.yaml` declare 4 services :
+
+| Service | Type | Rôle |
+| ------- | ---- | ---- |
+| `noxiasprospect-api` | web | Uvicorn + FastAPI, public sur 8000, applique les migrations Alembic au boot |
+| `noxiasprospect-worker` | worker | `arq` consomme les jobs depuis Redis (orchestrateur d'enrichissement) |
+| `noxiasprospect-db` | postgres | PG 15 managé, exposé via `${DATABASE_URL}` aux deux services |
+| `noxiasprospect-redis` | redis | broker + cache, `${REDIS_URL}` |
+
+Les secrets (Auth0, Bright Data, Pipedrive, Sentry) sont marqués `sync: false`
+dans le blueprint — il faut les renseigner une seule fois via le dashboard Render.
+
+### Frontend — Vercel
+
+```bash
+# 1. Connecter le repo dans le dashboard Vercel.
+# 2. Sélectionner « Root directory: frontend ».
+# 3. Renseigner les variables d'environnement (cf. tableau ci-dessous).
+# 4. La première mise en ligne se déclenche au premier push sur main.
+
+# Local CLI :
+vercel link
+vercel env pull frontend/.env.production.local
+vercel --prod
+```
+
+`frontend/vercel.json` règle déjà : framework Next.js, région `cdg1` (Paris),
+en-têtes de sécurité (`X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`).
+
+### Variables d'environnement par service
+
+| Variable | API (Render) | Worker (Render) | Front (Vercel) |
+| -------- | :-: | :-: | :-: |
+| `DATABASE_URL` | ✅ auto (DB) | ✅ auto (DB) | — |
+| `REDIS_URL` | ✅ auto (Redis) | ✅ auto (Redis) | — |
+| `AUTH0_DOMAIN` | ✅ | — | ✅ |
+| `AUTH0_CLIENT_ID` | ✅ | — | ✅ |
+| `AUTH0_CLIENT_SECRET` | ✅ | — | ✅ |
+| `AUTH0_AUDIENCE` | ✅ | — | ✅ |
+| `AUTH_SECRET` | — | — | ✅ (NextAuth random secret) |
+| `NEXTAUTH_URL` | — | — | ✅ (`https://app.noxias.fr`) |
+| `BRIGHTDATA_API_TOKEN` | ✅ | ✅ | — |
+| `BRIGHTDATA_GMAPS_DATASET_ID` | ✅ | ✅ | — |
+| `BRIGHTDATA_UNLOCKER_ZONE` | ✅ | ✅ | — |
+| `PIPEDRIVE_API_TOKEN` | ✅ | ✅ | — |
+| `PIPEDRIVE_COMPANY_DOMAIN` | ✅ | ✅ | — |
+| `PIPEDRIVE_SIREN_FIELD_KEY` | ✅ | — | — |
+| `PIPEDRIVE_IMPORTED_BY_FIELD_KEY` | ✅ | — | — |
+| `SENTRY_DSN` | ✅ | ✅ | — |
+| `NEXT_PUBLIC_SENTRY_DSN` | — | — | ✅ |
+| `NEXT_PUBLIC_API_URL` | — | — | ✅ (`https://api.noxias.fr`) |
+
+### Healthchecks
+
+| Endpoint | Code | Usage |
+| -------- | :--: | ----- |
+| `GET /health` | 200 si process up | Liveness (Render, Docker) |
+| `GET /health/ready` | 200 si DB+Redis OK, 503 sinon | Readiness — empêche Render de router du trafic vers une instance dégradée |
+
+### Migrations
+
+Idempotentes par construction. L'entrypoint Docker (`scripts/entrypoint.sh`)
+exécute `alembic upgrade head` à chaque boot **uniquement** depuis le service
+`api` (le worker s'abstient pour éviter une course au démarrage).
+
+### Image Docker
+
+Multi-stage `python:3.11-slim-bookworm`, `uv` pour la résolution des deps,
+bytecode pré-compilé, runtime non-root (`uid 1001`), `__pycache__` purgés.
+Cible : **< 200 Mo** (mesurée via `docker images`).
+
+### Premier déploiement de staging
+
+```bash
+# 1. Backend
+git checkout -b release/staging
+git push origin release/staging
+render blueprint launch        # crée 4 services en région Frankfurt
+
+# 2. Frontend
+vercel --target=staging        # déploiement preview, URL https://noxiasprospect-<sha>.vercel.app
+
+# 3. Synchroniser les vars Auth0 (callback URLs, allowed origins)
+#    → Auth0 Dashboard > Applications > NoxiasProspect
+#       Allowed Callback URLs : https://noxiasprospect-staging.vercel.app/api/auth/callback/auth0
+#       Allowed Logout URLs   : https://noxiasprospect-staging.vercel.app
+#       Allowed Web Origins   : https://noxiasprospect-staging.vercel.app
+
+# 4. Vérifier
+curl -fsS https://noxiasprospect-api.onrender.com/health
+curl -fsS https://noxiasprospect-api.onrender.com/health/ready
+open https://noxiasprospect-staging.vercel.app
+```
 
 ## Journal Phase 0 — décisions et hypothèses
 
